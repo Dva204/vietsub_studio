@@ -1,0 +1,70 @@
+# =============================
+# Python
+# =============================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+
+# Type checker
+.dmypy.json
+
+# Translations
+*.mo
+*.pot
+
+# =============================
+# Data / runtime output
+# =============================
+downloads/
+assets/
+
+# Cookies / tokens (common for web/API scraping)
+cookies/
+
+# =============================
+# OS / Editor
+# =============================
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+*.swp
+
+# =============================
+# Logs
+# =============================
+*.log
+
+# =============================
+# Misc
+# =============================
+*.tmp
+*.temp
+
