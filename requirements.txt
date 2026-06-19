@@ -4,3 +4,5 @@ deep-translator==1.11.4
 edge-tts==7.0.2
 yt-dlp[default,curl-cffi]>=2026.6.9
 pywebview>=5.4
+google-genai>=1.0.0
+google-genai
