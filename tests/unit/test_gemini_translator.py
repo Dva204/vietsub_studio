@@ -1,7 +1,12 @@
 import json
 import os
+import sys
 import unittest
+from pathlib import Path
 from unittest.mock import patch
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.gemini_translator import translate_blocks
 

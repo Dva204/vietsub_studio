@@ -1,8 +1,12 @@
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils.device import detect_whisper_config, format_device_summary, get_cuda_device_count
 

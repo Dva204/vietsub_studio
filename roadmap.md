@@ -1,479 +1,376 @@
-# ROADMAP.md
-
 # VIETDUB STUDIO
 
-## AI Video Translator & Shorts Factory (Desktop Windows)
+## Batch Video Localization for Vietnamese Shops
 
-**Version:** Business Plan 2.1 — Python Core, Offline-First  
-**Author:** An Đỗ Văn  
-**Cập nhật:** 2025
+**Version:** Product Roadmap 3.0
 
----
+**Nền tảng:** Desktop Windows, Python Core, Local-First
 
-# 1. TẦM NHÌN
-
-VietDub Studio là phần mềm Desktop Windows giúp người dùng:
-
-- Dịch video Trung Quốc, YouTube, TikTok sang tiếng Việt
-- Tạo phụ đề tiếng Việt tự động
-- Lồng tiếng AI tiếng Việt
-- Xuất video hoàn chỉnh định dạng MP4
-
-**Toàn bộ chạy trên máy người dùng. Không cần server. Không cần trả phí tháng.**
+**Khách hàng chính:** Shop và agency Việt hóa video sản phẩm Trung Quốc
+**Cập nhật:** 2026
 
 ---
 
-# 2. TRIẾT LÝ SẢN PHẨM
+# 1. ĐỊNH VỊ SẢN PHẨM
 
-| Người Việt thích | Người Việt không thích |
+VietDub Studio không cạnh tranh với CapCut, Premiere hoặc các trình chỉnh sửa video lớn.
+
+VietDub là công cụ **chuẩn bị và Việt hóa nội dung hàng loạt** trước khi người dùng đưa tài nguyên sang editor họ đã quen dùng.
+
+> **Thông điệp chính:** Biến một thư mục hoặc danh sách link video sản phẩm Trung Quốc thành bộ nội dung tiếng Việt có thể sử dụng ngay.
+
+Giá trị cốt lõi:
+
+- Xử lý 10–50 video theo hàng đợi thay vì làm thủ công từng video.
+- Dịch nhất quán theo thuật ngữ và cách xưng hô riêng của từng shop.
+- Chỉ yêu cầu người dùng kiểm tra những câu có nguy cơ sai.
+- Xuất tài nguyên chuẩn, không khóa người dùng vào VietDub.
+- Video và model STT được xử lý trên máy người dùng.
+
+---
+
+# 2. KHÁCH HÀNG MỤC TIÊU
+
+## Khách hàng ưu tiên
+
+| Nhóm | Công việc cần giải quyết |
 |---|---|
-| ✅ Mua 1 lần, dùng mãi | ❌ Trả tiền hàng tháng |
-| ✅ Chạy offline | ❌ Upload video lên server |
-| ✅ Không cần API riêng | ❌ Mua tool xong phải mua thêm API |
+| Shop nhập hàng Trung Quốc | Việt hóa video sản phẩm từ nhà cung cấp |
+| Agency marketing | Xử lý nhiều video cho nhiều shop mỗi ngày |
+| Nhân viên content | Tạo subtitle, transcript và caption nhanh |
+| Creator chuyên review sản phẩm | Dịch và tái biên tập video được cấp quyền sử dụng |
 
-**Mục tiêu V1:** "Không phát sinh chi phí sau khi mua"
+## Không ưu tiên trong MVP
+
+- Người dùng cần một video editor hoàn chỉnh.
+- Studio cần lip-sync hoặc voice cloning chuyên nghiệp.
+- Người chỉ cần tải một video đơn lẻ.
+- Nhu cầu tạo hiệu ứng, transition hoặc chỉnh màu chuyên sâu.
 
 ---
 
-# 3. KHÁCH HÀNG MỤC TIÊU
+# 3. WORKFLOW SẢN PHẨM
 
-| Nhóm | Nhu cầu chính |
+```text
+[Dán nhiều link / Import file / Import thư mục]
+                    ↓
+             [Project Queue]
+                    ↓
+       [Faster Whisper nhận dạng local]
+                    ↓
+  [Google Translate hoặc Gemini API của user]
+                    ↓
+      [Glossary + Translation Memory]
+                    ↓
+             [Exception Review]
+                    ↓
+             [Package Export]
+```
+
+Package đầu ra tiêu chuẩn:
+
+```text
+ten-video/
+├── source.mp4
+├── subtitle.vi.srt
+├── subtitled.mp4
+├── transcript.txt
+├── caption.txt
+└── project.json
+```
+
+Người dùng có thể tiếp tục chỉnh sửa bằng CapCut, Premiere hoặc công cụ khác.
+
+---
+
+# 4. NGUYÊN TẮC XUYÊN SUỐT
+
+- **Local-first:** Video, model STT, cache và project nằm trên máy người dùng.
+- **Internet minh bạch:** Downloader, Google Translate, Gemini và Edge TTS cần Internet.
+- **BYOK:** Gemini là tùy chọn; người dùng tự cung cấp API key.
+- **Không lưu API key plaintext:** Dùng Windows Credential Manager hoặc DPAPI.
+- **Reliability:** Tác vụ nặng có retry, timeout, progress, cancel và resume.
+- **Không mất dữ liệu:** Ghi file tạm rồi replace; project được lưu sau mỗi bước.
+- **Human-in-the-loop:** AI hỗ trợ, người dùng duyệt các trường hợp có nguy cơ sai.
+- **Editor-compatible:** Ưu tiên SRT, MP4, TXT, JSON và cấu trúc file chuẩn.
+- **Quyền nội dung:** App hiển thị cảnh báo chỉ sử dụng video người dùng có quyền khai thác.
+
+---
+
+# 5. CÔNG NGHỆ
+
+| Thành phần | Công nghệ |
 |---|---|
-| TikTok Creator | Dịch video Trung, tạo content nhanh |
-| YouTube Shorts | Tạo Shorts từ video nước ngoài |
-| MMO / Affiliate | Kiếm tiền từ video, content số lượng lớn |
-| Chủ Shop | Video marketing sản phẩm |
+| Desktop UI | Python + CustomTkinter |
+| Video processing | FFmpeg / ffprobe |
+| Link input | yt-dlp |
+| Speech-to-Text | Faster Whisper local |
+| Dịch nhanh | deep-translator / Google Translate |
+| Dịch thông minh | Gemini API, user tự nhập key |
+| Subtitle workspace | SRT parser + validation riêng |
+| Database | SQLite |
+| Packaging | PyInstaller |
+| Secret storage | Windows Credential Manager / DPAPI |
+| License | Perpetual version license, machine activation |
 
 ---
 
-# 4. MÔ HÌNH KỸ THUẬT
+# 6. TRẠNG THÁI CORE HIỆN TẠI
 
-```
-[User PC]
-    ↓
-[Video Import / URL Download]
-    ↓
-[Speech-to-Text — Faster Whisper local]
-    ↓
-[Dịch thuật — deep-translator (Google Translate free)]
-    ↓
-[Voice AI — Edge TTS (cần Internet)]
-    ↓
-[Subtitle Render — FFmpeg]
-    ↓
-[Export MP4]
-```
-
-> **Lưu ý:** Không có server render. Edge TTS và dịch thuật cần kết nối Internet. Các bước còn lại hoàn toàn offline.
-
----
-
-# 5. CÔNG NGHỆ (ĐÃ TỐI ƯU)
-
-| Thành phần | Công nghệ | Lý do chọn |
+| Module | Trạng thái | Ghi chú |
 |---|---|---|
-| **UI** | Python + CustomTkinter | Giao diện hiện đại, dark mode, dễ code hơn WPF nhiều |
-| **Video processing** | FFmpeg (subprocess) | Không thay thế được, chuẩn công nghiệp |
-| **Downloader** | yt-dlp | Hỗ trợ YouTube, TikTok, Bilibili, Douyin |
-| **Speech-to-Text** | Faster Whisper | Python native, hỗ trợ Trung/Anh/Nhật/Hàn |
-| **Dịch thuật** | deep-translator (Google Translate free) | Trung→Việt chất lượng tốt, không cần API key |
-| **TTS** | Edge TTS | Miễn phí, giọng Việt tự nhiên, cần Internet |
-| **Database** | SQLite (built-in Python) | Không cài thêm, đủ dùng cho project manager |
-| **Packaging** | PyInstaller | Đóng gói thành .exe Windows |
-| **License** | HWID hash (tự build) | Offline-friendly, không cần server |
-
-### So sánh với Tech Stack cũ
-
-| | Cũ (C# WPF) | Mới (Python) |
-|---|---|---|
-| Learning curve | Cao | Thấp |
-| AI coding support | Trung bình | Tốt |
-| Debug & test | Phải build | Chạy thẳng `python main.py` |
-| Community & example | Ít | Nhiều |
-| Thời gian ra MVP | Dài hơn | Nhanh hơn |
-
----
-
-# 6. CẤU TRÚC PROJECT
-
-```
-vietdub-studio/
-├── main.py                  # Entry point
-├── ui/
-│   ├── app.py               # Main window (CustomTkinter)
-│   ├── tab_downloader.py    # Tab tải video
-│   ├── tab_subtitle.py      # Tab subtitle + dịch
-│   ├── tab_voice.py         # Tab lồng tiếng
-│   └── tab_export.py        # Tab xuất video
-├── core/
-│   ├── downloader.py        # yt-dlp wrapper
-│   ├── transcriber.py       # Faster Whisper wrapper
-│   ├── translator.py        # deep-translator wrapper
-│   ├── tts.py               # Edge TTS wrapper
-│   └── exporter.py          # FFmpeg wrapper
-├── utils/
-│   ├── db.py                # SQLite helpers
-│   ├── license.py           # HWID + key check
-│   └── cleaner.py           # Dọn file temp sau render
-└── assets/
-    └── logo.png
-```
-
-> **Tip build:** Mỗi file trong `core/` là 1 module độc lập → dễ prompt AI từng phần, dễ test riêng lẻ.
+| Downloader | Đang phát triển | Có YouTube, TikTok, Douyin, Bilibili |
+| Import/video info | Prototype | Có ffprobe validation |
+| Faster Whisper | Prototype | Có CPU/GPU fallback, cần Model Manager |
+| Google Translator | Prototype | Có cache, retry và giữ timing |
+| Gemini Translator | Core hoàn thành | Có batch, retry và kiểm tra ID |
+| Subtitle Workspace | Core hoàn thành | Parse, edit, wrap và quality warning |
+| Subtitle Export | Core hoàn thành | Có preset Shorts, Classic, Compact |
+| TTS | Beta | Không nằm trong luồng bán hàng chính |
+| Project Queue | Chưa làm | Ưu tiên cao nhất tiếp theo |
+| Glossary/Memory | Chưa làm | Lợi thế cạnh tranh chính |
+| Exception Review UI | Chưa làm | Lợi thế cạnh tranh chính |
+| Package Export | Chưa hoàn thiện | Đã có MP4/SRT, thiếu manifest/text |
 
 ---
 
 # 7. ROADMAP PHÁT TRIỂN
 
----
+## PHASE 1 — COMMERCIAL MVP
 
-## QUY TẮC XUYÊN SUỐT (Bắt buộc mọi phase)
+**Mục tiêu:** Một shop có thể đưa 10 video vào app, xử lý theo hàng đợi, chỉ sửa các câu đáng ngờ và nhận đủ package đầu ra.
 
-- **Reliability:** Mọi tác vụ phải có retry, timeout, không treo vô hạn
-- **Error log:** Log lỗi rõ ràng, user tự đọc được nguyên nhân
-- **Progress bar:** Hiển thị tiến trình + nút hủy cho mọi tác vụ nặng
-- **Disk cleanup:** Tự động xóa file temp sau khi render xong
-- **License:** Cơ chế activate theo máy, có phương án khôi phục khi đổi máy
+### V0.1 — Input Inbox
 
----
+- Dán một hoặc nhiều link.
+- Import MP4/MKV/MOV.
+- Import cả thư mục.
+- Phát hiện link/file trùng.
+- Cảnh báo quyền sử dụng nội dung.
 
-## ══════════════════════════════════
-## PHASE 1 — MVP BÁN ĐƯỢC NGAY
-## ══════════════════════════════════
+**Done khi:** 20 input hỗn hợp được đưa vào cùng một project mà UI không treo.
 
-**Mục tiêu:** Có sản phẩm "đáng tiền" để bán, core offline.
+### V0.2 — Persistent Project Queue
 
-**Definition of Done toàn Phase 1:**
-- Xuất ra MP4 hoàn chỉnh (có subtitle tiếng Việt)
-- Timing subtitle khớp lời ở mức chấp nhận được
-- Không crash khi xử lý bộ 10 video test
-- Tốc độ: video 5–10 phút xử lý dưới 2 giờ trên máy phổ biến
-- Thao tác: tối đa 2 bước từ import → export
+- SQLite lưu project, job và trạng thái từng bước.
+- Trạng thái: pending, running, review, completed, failed, canceled.
+- Retry từng job.
+- Resume sau khi đóng app hoặc mất điện.
+- Giới hạn concurrency để không làm đầy RAM/GPU.
 
----
+**Done khi:** Đóng app giữa batch 10 video, mở lại và tiếp tục đúng bước chưa hoàn thành.
 
-### V0.1 — Video Downloader
+### V0.3 — STT Model Manager
 
-**Chức năng:**
-- Tải từ YouTube, TikTok, Douyin, Bilibili
-- Dùng yt-dlp
+- Model tiny, base và small.
+- Hiển thị dung lượng, trạng thái tải và thư mục lưu.
+- CPU/GPU auto-detect.
+- Ước lượng tốc độ theo cấu hình máy.
+- Progress và cancel khi tải model/STT.
 
-**Chi phí user:** 0đ
+**Done khi:** Máy mới có thể tải model và tạo SRT mà không thao tác terminal.
 
-**Done khi:**
-- Tải được ít nhất YouTube + TikTok ổn định với bộ 10 video test
-- Có cơ chế retry + thông báo lỗi rõ ràng
-- Không bị kẹt vô hạn khi mất mạng
+### V0.4 — Translation Engines
 
----
+- Fast Mode: Google Translate, không cần API key.
+- Smart Mode: Gemini, người dùng tự nhập API key.
+- Kiểm tra API key và thông báo quota/lỗi mạng.
+- Gemini lỗi thì cho phép fallback Google.
+- Không gửi video; chỉ gửi nội dung subtitle.
 
-### V0.2 — Import MP4
+**Done khi:** Không mất ID/timing và không âm thầm báo thành công khi có câu dịch thất bại.
 
-**Chức năng:**
-- Kéo thả file video
-- Hỗ trợ các codec phổ biến (H.264, H.265)
+### V0.5 — Shop Glossary
 
-**Chi phí user:** 0đ
+- Glossary theo shop/project.
+- Tên thương hiệu, tên sản phẩm, đơn vị, CTA và cách xưng hô.
+- Import/export CSV hoặc JSON.
+- Preview các thay đổi trước khi áp dụng.
 
-**Done khi:**
-- Import file MP4/MKV/MOV chạy được
-- Xử lý lỗi khi file không hợp lệ — user thấy được nguyên nhân
+Ví dụ:
 
----
+```text
+直播间 → phòng livestream
+到手价 → giá sau ưu đãi
+宝贝 → sản phẩm
+姐妹们 → các chị em
+```
 
-### V0.3 — Speech-to-Text
+**Done khi:** Thuật ngữ đã cấu hình xuất hiện nhất quán trong toàn bộ batch.
 
-**Chức năng:**
-- Nhận diện giọng nói: Trung, Anh, Nhật, Hàn
-- Output: file SRT
-- Dùng Faster Whisper local
+### V0.6 — Translation Memory
 
-**Chi phí user:** 0đ
+- Lưu câu nguồn, câu máy dịch và bản người dùng sửa.
+- Tái sử dụng bản dịch đã duyệt cho video sau.
+- Match chính xác trước; fuzzy match để Phase 2.
+- Cho phép xóa và export dữ liệu.
 
-**Lưu ý quan trọng:**
-- Cần có **Model Manager**: cơ chế cho phép user tự động tải model STT vào ổ cứng dễ dàng
-- Cung cấp lựa chọn model size: `tiny` (nhanh) → `base` → `small` (chính xác hơn) để user tự chọn tốc độ vs chất lượng theo cấu hình máy
-- Máy không có GPU NVIDIA sẽ chậm hơn đáng kể — cần thông báo rõ ràng
+**Done khi:** Câu đã sửa được tự động tái sử dụng và có nhãn cho người dùng biết nguồn.
 
-**Done khi:**
-- Tự động tải model STT thành công lần đầu
-- Tạo được SRT có timing theo audio (không lệch > vài giây)
-- Có progress bar + nút hủy
+### V0.7 — Exception Review
 
----
+Chỉ đưa vào danh sách cần kiểm tra các subtitle:
 
-### V0.4 — Dịch Subtitle
+- STT confidence thấp.
+- Còn ký tự Trung sau khi dịch.
+- Câu quá dài hoặc quá nhiều dòng.
+- Tốc độ đọc quá nhanh.
+- Timing bị chồng.
+- Gemini trả thiếu/sai ID.
+- Dịch thất bại hoặc fallback về câu nguồn.
 
-**Chức năng:**
-- Trung → Việt
-- Anh → Việt
-- Dùng deep-translator (Google Translate free)
+**Done khi:** Người dùng có thể duyệt lỗi bằng bàn phím, sửa và chuyển nhanh sang câu tiếp theo.
 
-**Chi phí user:** 0đ *(cần Internet)*
+### V0.8 — Package Export
 
-**Lưu ý:** deep-translator gọi Google Translate miễn phí, không cần API key. Chất lượng Trung→Việt tốt hơn nhiều so với model local. Có giới hạn request nhưng đủ cho user thông thường.
+- SRT tiếng Việt.
+- MP4 burn subtitle tùy chọn.
+- Transcript TXT.
+- Caption/CTA tùy chọn bằng Gemini BYOK.
+- Manifest JSON chứa trạng thái và metadata.
+- Preset Shorts, Classic, Compact.
 
-**Done khi:**
-- Dịch ra subtitle tiếng Việt đúng với SRT pipeline (giữ timing, số dòng hợp lý)
-- Có cache dịch theo đoạn để giảm thời gian khi chạy lại
+**Done khi:** Package mở được bằng công cụ phổ biến và có cấu trúc tên file nhất quán.
 
----
+### Definition of Done Phase 1
 
-### V0.5 — Voice AI (TTS)
-
-**Chức năng:**
-- Giọng nam, giọng nữ tiếng Việt
-- Dùng Edge TTS
-
-**Chi phí user:** 0đ *(cần Internet)*
-
-**Lưu ý:** Edge TTS dùng miễn phí nhưng cần kết nối mạng. Phải có tooltip/thông báo rõ ràng khi gọi thất bại do mất mạng.
-
-**Done khi:**
-- Có tùy chọn bật/tắt voice khi export
-- Ít nhất 3 preset giọng (giọng nam + nữ)
-- Ghép voice vào MP4 ổn định
+- Batch 10 video chạy hết mà không crash.
+- Có thể resume project sau khi đóng app.
+- Không có job treo vô hạn.
+- Mọi lỗi có nguyên nhân và nút retry.
+- Người dùng không cần terminal.
+- Ít nhất 5 shop pilot dùng dữ liệu thật.
+- Ít nhất 3 shop đồng ý trả tiền hoặc đặt cọc.
 
 ---
 
-### V0.6 — Video Export
+## PHASE 2 — SELLABLE PRODUCT
 
-**Chức năng:**
-- Ghép video + subtitle + voice
-- Output: MP4
+**Chỉ bắt đầu khi Phase 1 đạt cổng pilot trả tiền.**
 
-**Chi phí user:** 0đ
+### V1.0 — One-Screen Workflow
 
-**Done khi:**
-- MP4 xuất được với preset cơ bản (giữ âm gốc + subtitle hiển thị rõ)
-- Tự động dọn file temp (audio trung gian, frames...) sau render — tránh đầy ổ C
-- Có progress bar + log lỗi rõ ràng
+- Inbox, Queue, Review và Export trong một luồng rõ ràng.
+- Không xây timeline video editor.
+- Hiển thị disk usage và thời gian ước tính.
 
----
+### V1.1 — Shop Profiles
 
-### 💰 MỐC BÁN ĐẦU TIÊN
+- Mỗi shop có glossary, cách xưng hô, preset và thư mục export riêng.
+- Clone cấu hình shop.
 
-> **Giá: 299.000 VNĐ — Lifetime, không phí tháng**
+### V1.2 — Batch Operations
 
----
+- Retry, cancel, export và áp preset cho nhiều job.
+- Filter theo trạng thái/lỗi.
+- Xử lý 10/20/50 video theo giới hạn máy.
 
-## ══════════════════════════════════
-## PHASE 2 — TĂNG TỶ LỆ MUA
-## ══════════════════════════════════
+### V1.3 — Packaging & Update
 
-**Mục tiêu:** Nâng chất lượng output, tăng conversion.
+- PyInstaller Windows.
+- Kiểm tra FFmpeg/model khi khởi động.
+- Migration SQLite an toàn.
+- Crash log dễ gửi hỗ trợ.
+- Cơ chế cập nhật phiên bản có kiểm soát.
 
-**Definition of Done toàn Phase 2:**
-- Subtitle styling đúng layout TikTok/Shorts (line wrap + viền + màu)
-- Watermark & preset xuất nhất quán
-- Project manager giúp lưu & khôi phục tiến trình
+### V1.4 — License
 
----
-
-### V1.0 — Subtitle Templates
-
-**Kiểu:** TikTok, Podcast, CapCut style  
-**Chi phí user:** 0đ
+- Mua một lần, dùng vĩnh viễn phiên bản đã mua.
+- Bao gồm 12 tháng cập nhật.
+- Hết thời hạn vẫn dùng được; chỉ trả phí khi muốn nâng cấp.
+- Có cơ chế chuyển máy và khôi phục license.
 
 ---
 
-### V1.1 — Auto Subtitle Styling
+## PHASE 3 — AGENCY PRO
 
-**Tự động:** Căn giữa, viền, màu sắc phù hợp nền tảng  
-**Chi phí user:** 0đ
+**Chỉ phát triển theo nhu cầu đã trả tiền.**
 
----
-
-### V1.2 — Video Presets
-
-**Xuất tối ưu cho:** TikTok, YouTube Shorts, Instagram Reels  
-**Chi phí user:** 0đ
-
----
-
-### V1.3 — Watermark
-
-**Chức năng:** Thêm logo, tên kênh  
-**Chi phí user:** 0đ
+- Fuzzy Translation Memory.
+- Báo cáo thời gian và tỷ lệ lỗi theo batch.
+- Nhiều output variant cho cùng một video.
+- Queue ưu tiên và lịch chạy ngoài giờ.
+- Template caption theo shop/ngành hàng.
+- Export/import project để bàn giao.
+- Preset riêng cho từng khách hàng agency.
 
 ---
 
-### V1.4 — Project Manager
+# 8. TTS VÀ DUBBING
 
-**Lưu:** Dự án, video, template, tiến trình xử lý  
-**Chi phí user:** 0đ
+TTS không phải tính năng bán hàng chính của MVP.
 
----
+## Narration Beta
 
-### 💰 MỐC NÂNG GIÁ
+- Gom nhiều subtitle thành đoạn thuyết minh liên tục.
+- Duck âm thanh gốc khi narration phát.
+- Không cam kết lip-sync.
 
-> **Giá: 499.000 VNĐ — Lifetime**
+## Dubbing Sync — Deferred
 
----
+Chỉ nghiên cứu sau khi có khách hàng yêu cầu và trả tiền:
 
-## ══════════════════════════════════
-## PHASE 3 — TĂNG GIÁ TRỊ MẠNH (ADD-ON AI)
-## ══════════════════════════════════
+```text
+Gom câu theo hội thoại
+→ Tạo audio
+→ Đo duration
+→ Viết ngắn nếu quá dài
+→ FFmpeg atempo nếu lệch nhẹ
+→ Collision resolver
+→ Mix với âm thanh gốc
+```
 
-**Mục tiêu:** Tính năng AI nâng cao, tùy chọn — yêu cầu user tự cấu hình API Key.
-
----
-
-### V2.0 — AI Rewrite
-
-**Viết lại nội dung video.**
-
-**Mode A — Gemini API (user tự cấu hình):**
-- Chi phí: ~0đ đến vài nghìn đồng/video
-
-**Mode B — OpenAI API (user tự cấu hình):**
-- Chi phí: ~100đ – 500đ/video
+Không overlay audio từng subtitle một cách mù quáng.
 
 ---
 
-### V2.1 — AI Hook Generator
+# 9. NHỮNG THỨ KHÔNG XÂY
 
-Sinh hook viral từ nội dung video  
-**Chi phí:** API user
-
-### V2.2 — AI Caption Generator
-
-Sinh caption + CTA  
-**Chi phí:** API user
-
-### V2.3 — AI Hashtag Generator
-
-**Chi phí:** API user
-
-### V2.4 — AI Title Generator
-
-**Chi phí:** API user
+- Video timeline editor hoàn chỉnh.
+- Kho transition/effect cạnh tranh CapCut.
+- Chỉnh màu chuyên nghiệp.
+- Lip-sync và voice cloning trong MVP.
+- Social scheduler.
+- Trend research trước khi có khách trả tiền.
+- Auto zoom, thumbnail hoặc clip cutter nếu chưa có nhu cầu pilot rõ ràng.
 
 ---
 
-### 💰 MỐC NÂNG GIÁ
+# 10. MÔ HÌNH THƯƠNG MẠI
 
-> **Giá: 699.000 VNĐ — Lifetime**
+Giá dưới đây là giả thuyết cần kiểm chứng, không phải cam kết:
 
----
-
-## ══════════════════════════════════
-## PHASE 4 — TOOL CHUYÊN NGHIỆP
-## ══════════════════════════════════
-
-**Mục tiêu:** Dành cho creator chuyên nghiệp và agency.
-
----
-
-### V3.0 — Batch Processing
-
-Xử lý 10 / 20 / 50 video cùng lúc  
-**Chi phí user:** 0đ *(phụ thuộc API nếu dùng AI)*
-
-### V3.1 — Clip Cutter
-
-Tự cắt clip ngắn từ video dài  
-**Chi phí:** 0đ
-
-### V3.2 — Best Moments
-
-Tự động tìm đoạn hay nhất trong video  
-**Chi phí:** 0đ
-
-### V3.3 — Auto Zoom
-
-Theo dõi khuôn mặt tự động zoom  
-**Chi phí:** 0đ
-
-### V3.4 — Auto Thumbnail
-
-Tự tạo thumbnail  
-**Chi phí:** 0đ (hoặc API user)
-
----
-
-### 💰 MỐC NÂNG GIÁ
-
-> **Giá: 999.000 VNĐ — Lifetime**
-
----
-
-## ══════════════════════════════════
-## PHASE 5 — AGENCY LEVEL
-## ══════════════════════════════════
-
-**Mục tiêu:** Phục vụ agency content và team lớn.
-
----
-
-### V4.0 — Content Factory
-
-1 video → nhiều Shorts tự động
-
-### V4.1 — Channel Builder
-
-Template theo niche (ẩm thực, tài chính, giáo dục...)
-
-### V4.2 — Trend Research
-
-Phân tích chủ đề đang viral *(API user)*
-
-### V4.3 — Content Calendar
-
-Lập lịch nội dung theo nền tảng
-
----
-
-### 💰 MỐC NÂNG GIÁ
-
-> **Giá: 1.490.000 VNĐ — Lifetime**
-
----
-
-# 8. CHI PHÍ THỰC TẾ CỦA USER
-
-| Phase | Chi phí AI | Chi phí hàng tháng |
+| Gói | Đối tượng | Giá thử nghiệm |
 |---|---|---|
-| V0 → V1 | 0đ | 0đ |
-| V2 (Gemini) | ~0đ – 20.000đ/tháng | Không cố định |
-| V2 (OpenAI) | ~20.000đ – 200.000đ/tháng | Không cố định |
-| V3 Batch lớn | Phụ thuộc API user | Không cố định |
+| Founder | Nhóm pilot đầu tiên | 299.000 VNĐ |
+| Standard | Shop xử lý batch nhỏ | 499.000 VNĐ |
+| Pro | Shop lớn/agency | 799.000–999.000 VNĐ |
+
+Nguyên tắc:
+
+- Không thu phí theo số video ở bản desktop.
+- Gemini dùng API key của khách.
+- License vĩnh viễn cho version đã mua, không hứa cập nhật miễn phí trọn đời.
+- Chỉ chốt bảng giá sau khi có ít nhất 5 cuộc thử nghiệm với dữ liệu thật.
 
 ---
 
-# 9. RỦI RO CẦN XỬ LÝ
+# 11. CỔNG KIỂM CHỨNG SẢN PHẨM
 
-| Rủi ro | Mức độ | Giải pháp |
-|---|---|---|
-| Faster Whisper chậm trên CPU | Cao | Cung cấp 3 model size (tiny/base/small), thông báo thời gian xử lý ước tính |
-| Chất lượng dịch thuật kém | Cao | Dùng deep-translator (Google Translate) thay model local |
-| Edge TTS mất mạng | Trung | Thông báo lỗi rõ ràng, cho phép export không có voice |
-| PyInstaller file size lớn (~300MB) | Thấp | Host file download riêng, document rõ cho user |
-| yt-dlp vi phạm ToS nền tảng | Trung | Thêm disclaimer trong app, để user tự chịu trách nhiệm nội dung |
-| License bị crack | Trung | HWID binding, cân nhắc obfuscation code sau khi có doanh thu |
+Trước khi mở rộng tính năng, cần đo:
 
----
+- Thời gian xử lý và review trung bình mỗi video.
+- Tỷ lệ subtitle không cần người dùng sửa.
+- Số lỗi được Exception Review phát hiện đúng.
+- Số video trung bình mỗi shop xử lý mỗi tuần.
+- Có ít nhất 3 khách hàng trả tiền hoặc đặt cọc.
 
-# 10. CHIẾN LƯỢC BÁN HÀNG
-
-**Thông điệp chính:**
-> *"Dịch video Trung Quốc sang tiếng Việt chỉ bằng 1 click."*
-
-**Thông điệp phụ:**
-- Không phí tháng
-- Không cần server
-- Core chạy offline — AI nâng cao tùy chọn, tự cấu hình API
-- Mua 1 lần, dùng mãi
-
-**Kênh bán hàng gợi ý:**
-- TikTok demo (quay màn hình chạy tool thực tế)
-- Facebook group MMO Việt Nam, group TikTok Creator
-- Zalo OA thông báo cập nhật version
+Nếu khách hàng không trả tiền cho Batch + Glossary + Review, dừng mở rộng sản phẩm và phỏng vấn lại nhu cầu. Không dùng thêm tính năng để che giấu việc chưa có product-market fit.
 
 ---
 
-# 11. MỤC TIÊU DÀI HẠN
+# 12. MỤC TIÊU DÀI HẠN
 
-**Không trở thành:** Tool downloader video đơn thuần
+**Không trở thành:** downloader hoặc video editor tổng quát.
 
-**Trở thành:** Phần mềm dịch và tái sử dụng nội dung video số 1 cho Creator Việt Nam
+**Trở thành:** công cụ desktop Việt hóa video sản phẩm Trung Quốc nhanh và nhất quán nhất cho shop và agency Việt Nam.

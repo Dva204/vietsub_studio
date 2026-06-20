@@ -2,8 +2,8 @@ import sys
 from pathlib import Path
 
 # Ensure we can import project modules when running from anywhere
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.append(str(PROJECT_ROOT))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.transcriber import transcribe_video
 

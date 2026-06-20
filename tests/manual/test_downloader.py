@@ -1,6 +1,9 @@
 import sys
 import os
-sys.path.append('..')   # De import tu thu muc cha
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT / "core"))
  
 from downloader import download_video
  
@@ -17,7 +20,7 @@ for url in TEST_URLS:
     print(f'\nThu tai: {url}')
     result = download_video(
         url=url,
-        output_path=os.path.join(os.path.dirname(__file__), '..', 'downloads'),
+        output_path=str(PROJECT_ROOT / "downloads"),
         progress_callback=show_progress
     )
     if result['success']:

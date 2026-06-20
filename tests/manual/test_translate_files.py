@@ -6,6 +6,9 @@ import argparse
 import sys
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+
 from core.translator import translate_srt
 
 
@@ -16,7 +19,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "paths",
         nargs="*",
-        default=["downloads"],
+        default=[str(PROJECT_ROOT / "downloads")],
         help="File/thu muc SRT. Mac dinh: downloads",
     )
     parser.add_argument(

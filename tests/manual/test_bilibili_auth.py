@@ -1,8 +1,10 @@
 """Test Bilibili guest session + download."""
 import sys
 import os
+from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(__file__))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT / "core"))
 
 from bilibili_auth import acquire_guest_session, has_login_session, GUEST_COOKIE_FILE
 from downloader import download_video
@@ -21,7 +23,7 @@ else:
 print('\n=== Buoc 2: Tai video 720p (guest) ===')
 result = download_video(
     url=TEST_URL,
-    output_path='../downloads',
+    output_path=str(PROJECT_ROOT / "downloads"),
     bilibili_quality='guest',
     progress_callback=lambda m: print(f'  >> {m}', end='\r'),
 )

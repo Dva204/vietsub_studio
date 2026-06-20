@@ -5,6 +5,8 @@ import re
 import time
 from pathlib import Path
 
+from core.subtitle import blocks_to_srt, parse_srt_blocks
+
 CACHE_FILE = Path(__file__).resolve().parent.parent / "cache" / "translate_cache.json"
 MARKER_TEMPLATE = "[[VDS_{index:04d}]]"
 
@@ -213,25 +215,8 @@ def _is_cancelled(cancel_flag) -> bool:
 
 
 def _parse_srt(content: str) -> list[dict]:
-    normalized = content.replace("\r\n", "\n").replace("\r", "\n").strip()
-    blocks = []
-    pattern = re.compile(
-        r"(?m)^(\d+)\s*\n([^\n]+?\s*-->\s*[^\n]+)\s*\n"
-        r"(.*?)(?=\n{2,}\d+\s*\n|\Z)",
-        re.DOTALL,
-    )
-    for match in pattern.finditer(normalized):
-        blocks.append(
-            {
-                "index": match.group(1),
-                "time": match.group(2).strip(),
-                "text": match.group(3).strip(),
-            }
-        )
-    return blocks
+    return parse_srt_blocks(content)
 
 
 def _blocks_to_srt(blocks: list[dict]) -> str:
-    return "\n".join(
-        f"{block['index']}\n{block['time']}\n{block['text']}\n" for block in blocks
-    )
+    return blocks_to_srt(blocks)

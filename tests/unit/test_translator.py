@@ -1,11 +1,12 @@
 import tempfile
 import unittest
 from pathlib import Path
+import sys
 
-try:
-    from core import translator as translator_module
-except ModuleNotFoundError:
-    import translator as translator_module
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from core import translator as translator_module
 
 SRT_CONTENT = """1\r
 00:00:00,000 --> 00:00:01,000\r
