@@ -152,12 +152,12 @@ class ProjectQueue:
         try:
             if status:
                 rows = connection.execute(
-                    "SELECT * FROM jobs WHERE project_id = ? AND status = ? ORDER BY id",
+                    "SELECT * FROM jobs WHERE project_id = ? AND status = ? ORDER BY id DESC",
                     (project_id, status),
                 ).fetchall()
             else:
                 rows = connection.execute(
-                    "SELECT * FROM jobs WHERE project_id = ? ORDER BY id", (project_id,)
+                    "SELECT * FROM jobs WHERE project_id = ? ORDER BY id DESC", (project_id,)
                 ).fetchall()
             return [dict(row) for row in rows]
         finally:

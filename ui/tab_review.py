@@ -97,6 +97,7 @@ class ReviewTab(ctk.CTkFrame):
         review_jobs = [
             job for job in (dashboard["jobs"] if dashboard else [])
             if job["status"] in {"review", "completed"}
+            and self.backend.can_edit_subtitles(job["id"])
         ]
         signature = tuple((job["id"], job["updated_at"]) for job in review_jobs)
         if not force and signature == self._job_signature:

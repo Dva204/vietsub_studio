@@ -71,6 +71,15 @@ class ProjectQueueTests(unittest.TestCase):
         with self.assertRaises(DuplicateJobError):
             self.queue.add_job(project_id, "url", "https://example.com/video")
 
+    def test_lists_newest_jobs_first(self):
+        project_id = self.queue.create_project("Shop", str(self.output_dir))
+        first_id = self.queue.add_job(project_id, "url", "https://example.com/first")
+        second_id = self.queue.add_job(project_id, "url", "https://example.com/second")
+
+        jobs = self.queue.list_jobs(project_id)
+
+        self.assertEqual([job["id"] for job in jobs], [second_id, first_id])
+
     def test_claim_fail_and_retry_job(self):
         project_id = self.queue.create_project("Shop", str(self.output_dir))
         job_id = self.queue.add_job(project_id, "url", "https://example.com/video")

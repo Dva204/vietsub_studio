@@ -46,7 +46,9 @@ class VietDubBackend:
     def initialize(self) -> dict:
         self.database.initialize()
         recovered = self.queue.recover_interrupted_jobs()
-        removed = self.cleaner.cleanup_stale_workdirs()
+        removed = self.cleaner.cleanup_stale_workdirs(
+            protected_paths=self._protected_workdirs()
+        )
         return {"recovered_jobs": recovered, "removed_temp": removed}
 
     def create_shop(self, name: str, **options) -> int:
@@ -142,10 +144,8 @@ class VietDubBackend:
         artifacts = {item["artifact_type"]: item["path"] for item in detail["artifacts"]}
         source_path = artifacts.get("source_srt")
         translated_path = artifacts.get("translated_srt")
-        source = SubtitleDocument.load(source_path) if source_path else SubtitleDocument([])
-        translated = (
-            SubtitleDocument.load(translated_path) if translated_path else SubtitleDocument([])
-        )
+        source = _load_subtitle_if_present(source_path)
+        translated = _load_subtitle_if_present(translated_path)
         source_by_id = {entry.index: entry.text for entry in source.entries}
         issues_by_id = {}
         for issue in detail["review_issues"]:
@@ -161,7 +161,18 @@ class VietDubBackend:
             }
             for entry in translated.entries
         ]
-        return {**detail, "entries": entries}
+        return {
+            **detail,
+            "entries": entries,
+            "editable": bool(translated_path and Path(translated_path).is_file()),
+        }
+
+    def can_edit_subtitles(self, job_id: int) -> bool:
+        detail = self.job_detail(job_id)
+        return any(
+            item["artifact_type"] == "translated_srt" and Path(item["path"]).is_file()
+            for item in detail["artifacts"]
+        )
 
     def model_status(self) -> list[dict]:
         return self.models.list_models()
@@ -174,12 +185,12 @@ class VietDubBackend:
         artifacts = {item["artifact_type"]: item["path"] for item in detail["artifacts"]}
         translated_path = artifacts.get("translated_srt")
         source_path = artifacts.get("source_srt")
-        if not translated_path:
-            raise RuntimeError("Job chua co translated SRT")
+        if not translated_path or not Path(translated_path).is_file():
+            raise RuntimeError("File subtitle cua job khong con ton tai")
         translated = SubtitleDocument.load(translated_path)
         translated.update_text(entry_index, text)
         translated.save(translated_path)
-        source = SubtitleDocument.load(source_path) if source_path else None
+        source = _load_subtitle_if_present(source_path) if source_path else None
         issues = self.review.analyze(translated, source)
         self.review.replace_issues(job_id, issues)
         return {"issues": self.review.list_issues(job_id), "path": translated_path}
@@ -189,7 +200,10 @@ class VietDubBackend:
 
     def approve_job(self, job_id: int) -> int:
         detail = self.job_detail(job_id)
-        unresolved = [item for item in detail["review_issues"] if not item["resolved"]]
+        unresolved = [
+            item for item in detail["review_issues"]
+            if not item["resolved"] and item["severity"] == "error"
+        ]
         if unresolved:
             raise RuntimeError(f"Con {len(unresolved)} review issue chua xu ly")
         artifacts = {item["artifact_type"]: item["path"] for item in detail["artifacts"]}
@@ -265,10 +279,36 @@ class VietDubBackend:
 
         return LocalizationService(self.glossary, self.memory, self.review)
 
+    def _protected_workdirs(self):
+        connection = self.database.connect()
+        try:
+            rows = connection.execute(
+                """
+                SELECT jobs.id, projects.output_dir
+                FROM jobs JOIN projects ON projects.id = jobs.project_id
+                WHERE jobs.status NOT IN ('completed', 'canceled')
+                """
+            ).fetchall()
+            return [
+                Path(row["output_dir"]) / ".work" / f"job_{row['id']}"
+                for row in rows
+            ]
+        finally:
+            connection.close()
+
 
 def _default_data_root():
     base = os.getenv("LOCALAPPDATA") or Path.home() / "AppData" / "Local"
     return Path(base) / "VietDubStudio"
+
+
+def _load_subtitle_if_present(path: str | None) -> SubtitleDocument:
+    if not path or not Path(path).is_file():
+        return SubtitleDocument([])
+    try:
+        return SubtitleDocument.load(path)
+    except (OSError, UnicodeError, ValueError):
+        return SubtitleDocument([])
 
 
 def _whisper_language_name(source_language: str) -> str:

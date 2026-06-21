@@ -22,8 +22,14 @@ class WorkspaceCleaner:
             target.unlink()
         return True
 
-    def cleanup_stale_workdirs(self, max_age_hours: float = 24) -> list[str]:
+    def cleanup_stale_workdirs(
+        self,
+        max_age_hours: float = 24,
+        *,
+        protected_paths=(),
+    ) -> list[str]:
         cutoff = time.time() - max_age_hours * 3600
+        protected = {Path(path).resolve() for path in protected_paths}
         removed = []
         for root in self.allowed_roots:
             if not root.exists():
@@ -33,6 +39,12 @@ class WorkspaceCleaner:
             candidates += list(root.glob("**/vietdub_tts_*"))
             for candidate in candidates:
                 try:
+                    resolved = candidate.resolve()
+                    if any(
+                        resolved == item or resolved in item.parents or item in resolved.parents
+                        for item in protected
+                    ):
+                        continue
                     if candidate.stat().st_mtime < cutoff and self.remove(candidate):
                         removed.append(str(candidate))
                 except FileNotFoundError:

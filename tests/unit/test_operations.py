@@ -47,6 +47,22 @@ class OperationsTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 cleaner.remove(root)
 
+    def test_cleaner_preserves_protected_review_workdir(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            work = root / ".work" / "job_3"
+            work.mkdir(parents=True)
+            old = time.time() - 48 * 3600
+            os.utime(work, (old, old))
+
+            removed = WorkspaceCleaner([root]).cleanup_stale_workdirs(
+                max_age_hours=24,
+                protected_paths=[work],
+            )
+
+            self.assertEqual(removed, [])
+            self.assertTrue(work.exists())
+
     @unittest.skipUnless(os.name == "nt", "DPAPI chi co tren Windows")
     def test_secret_store_round_trip_uses_dpapi(self):
         with tempfile.TemporaryDirectory() as temp_dir:

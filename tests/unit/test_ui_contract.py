@@ -12,6 +12,22 @@ from core.subtitle import SubtitleIssue
 
 
 class UiContractTests(unittest.TestCase):
+    def test_missing_stale_subtitle_artifact_does_not_crash_workspace(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            backend = VietDubBackend(Path(temp_dir) / "data")
+            backend.initialize()
+            shop_id = backend.create_shop("Shop")
+            project_id = backend.create_project("Project", shop_id)
+            job_id = backend.queue.add_job(project_id, "url", "https://example.com/stale")
+            missing = Path(temp_dir) / "deleted" / "subtitle.vi.srt"
+            backend.queue.add_artifact(job_id, "translated_srt", str(missing))
+
+            workspace = backend.review_workspace(job_id)
+
+            self.assertEqual(workspace["entries"], [])
+            self.assertFalse(workspace["editable"])
+            self.assertFalse(backend.can_edit_subtitles(job_id))
+
     def test_review_edit_and_approve_flow(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
