@@ -26,6 +26,7 @@ def translate_blocks(
     cancel_flag=None,
     client=None,
     retry_delay: float = 1.0,
+    glossary_context: str = "",
 ) -> dict:
     """Dich cac block ``{id, text}`` va giu nguyen thu tu cung ID.
 
@@ -74,6 +75,7 @@ def translate_blocks(
                 max_retries=max_retries,
                 cancel_flag=cancel_flag,
                 retry_delay=retry_delay,
+                glossary_context=glossary_context,
             )
         except Exception as error:
             logging.error("Gemini translation failed: %s", error)
@@ -118,8 +120,9 @@ def _request_translation(
     max_retries: int,
     cancel_flag,
     retry_delay: float,
+    glossary_context: str,
 ) -> list[dict]:
-    prompt = _build_prompt(blocks, source_language)
+    prompt = _build_prompt(blocks, source_language, glossary_context)
     attempts = max(1, max_retries)
     last_error: Exception | None = None
 
@@ -151,11 +154,15 @@ def _request_translation(
     raise RuntimeError(f"Gemini that bai sau {attempts} lan: {last_error}")
 
 
-def _build_prompt(blocks: list[dict], source_language: str) -> str:
+def _build_prompt(blocks: list[dict], source_language: str, glossary_context: str = "") -> str:
     source = "tu dong nhan dien" if source_language == "auto" else source_language
     payload = json.dumps(blocks, ensure_ascii=False)
+    glossary_section = glossary_context.strip() or "Khong co glossary rieng."
     return f"""Ban la bien dich phu de video chuyen nghiep.
 Ngon ngu nguon: {source}. Ngon ngu dich: tieng Viet.
+
+Glossary bat buoc neu thuat ngu xuat hien:
+{glossary_section}
 
 Yeu cau:
 - Doc toan bo cac cau de hieu ngu canh truoc khi dich.

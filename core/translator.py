@@ -120,37 +120,24 @@ def _translate_chunk(
     max_retries: int,
     cancel_flag,
 ) -> tuple[list[str], int, int]:
+    """Translate each cue independently so Google cannot blend nearby dialogue.
+
+    Batch markers preserve timing, but machine translation may still rewrite the
+    contents of several short cues as one conversation.  That produced valid SRT
+    with repeated, incorrect sentences.  Context-aware batching belongs to the
+    Gemini translator, which has an explicit structured-output contract.
+    """
     non_empty = [(index, text) for index, text in enumerate(texts) if text]
     if not non_empty:
         return texts, 0, 0
 
-    marked_text = "\n".join(
-        f"{MARKER_TEMPLATE.format(index=index)} {text}" for index, text in non_empty
-    )
-    cache_key = f"v2::{src_lang}::batch::{marked_text}"
-    request_count = 0
-
-    if cache_key in cache:
-        translated_batch = cache[cache_key]
-    else:
-        translated_batch = _translate_with_retry(
-            translator, marked_text, max_retries, cancel_flag
-        )
-        request_count += 1
-        if translated_batch:
-            cache[cache_key] = translated_batch
-
-    parsed = _split_marked_translation(translated_batch or "", len(texts))
-    if parsed is not None:
-        return parsed, request_count, 0
-
-    # Google doi khi xoa marker. Dich rieng tung block de khong lam sai timing.
     result = list(texts)
+    request_count = 0
     failures = 0
     for index, text in non_empty:
         if _is_cancelled(cancel_flag):
             break
-        item_key = f"v2::{src_lang}::item::{text}"
+        item_key = f"v3::{src_lang}::item::{text}"
         translated = cache.get(item_key)
         if not translated:
             translated = _translate_with_retry(

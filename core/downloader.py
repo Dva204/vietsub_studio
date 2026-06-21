@@ -4,12 +4,20 @@ import logging
 import re
 from urllib.parse import urlsplit, urlunsplit
 
-from bilibili_auth import (
+try:
+    from core.bilibili_auth import (
+        ensure_bilibili_cookies,
+        get_cookie_file_for_quality,
+        has_login_session,
+        refresh_session_on_412,
+    )
+except ModuleNotFoundError:
+    from bilibili_auth import (
     ensure_bilibili_cookies,
     get_cookie_file_for_quality,
     has_login_session,
     refresh_session_on_412,
-)
+    )
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 

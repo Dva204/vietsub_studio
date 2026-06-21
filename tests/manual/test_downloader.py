@@ -5,7 +5,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "core"))
  
-from downloader import download_video
+from core.downloader import download_video
  
 TEST_URLS = [
     # YouTube - video ngan test (khoang 10 giay)

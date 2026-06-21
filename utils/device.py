@@ -32,12 +32,18 @@ class WhisperDeviceConfig:
     reason: str
 
 
-def get_cuda_device_count() -> int:
-    """Số GPU NVIDIA mà CTranslate2 nhận diện được (0 = không dùng được CUDA)."""
+def get_cuda_device_count():
     try:
         import ctranslate2
 
-        return int(ctranslate2.get_cuda_device_count())
+        count = ctranslate2.get_cuda_device_count()
+
+        # Test thực sự xem CUDA runtime có hoạt động không
+        from ctypes import CDLL
+        CDLL("cublas64_12.dll")
+
+        return int(count)
+
     except Exception:
         return 0
 

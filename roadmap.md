@@ -121,16 +121,18 @@ Người dùng có thể tiếp tục chỉnh sửa bằng CapCut, Premiere ho�
 |---|---|---|
 | Downloader | Đang phát triển | Có YouTube, TikTok, Douyin, Bilibili |
 | Import/video info | Prototype | Có ffprobe validation |
-| Faster Whisper | Prototype | Có CPU/GPU fallback, cần Model Manager |
+| Faster Whisper | Core hoàn thành | Có CPU/GPU fallback, Model Manager và SRT atomic |
 | Google Translator | Prototype | Có cache, retry và giữ timing |
 | Gemini Translator | Core hoàn thành | Có batch, retry và kiểm tra ID |
 | Subtitle Workspace | Core hoàn thành | Parse, edit, wrap và quality warning |
 | Subtitle Export | Core hoàn thành | Có preset Shorts, Classic, Compact |
 | TTS | Beta | Không nằm trong luồng bán hàng chính |
-| Project Queue | Chưa làm | Ưu tiên cao nhất tiếp theo |
-| Glossary/Memory | Chưa làm | Lợi thế cạnh tranh chính |
-| Exception Review UI | Chưa làm | Lợi thế cạnh tranh chính |
-| Package Export | Chưa hoàn thiện | Đã có MP4/SRT, thiếu manifest/text |
+| Project Queue | Core hoàn thành | Persistent state, retry, cancel và resume; còn UI |
+| Glossary/Memory | Core hoàn thành | CRUD, CSV và exact-match memory; còn UI |
+| Exception Review | Core hoàn thành | Detection và persistence; còn review UI |
+| Package Export | Core hoàn thành | MP4, SRT, transcript và manifest atomic |
+| Secret storage | Core hoàn thành | Gemini key mã hóa bằng Windows DPAPI |
+| License | Core hoàn thành | Ed25519, machine binding và perpetual version |
 
 ---
 

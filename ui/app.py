@@ -1,191 +1,272 @@
-"""
-VietSub Studio - Main UI
-"""
-import os
+"""VietDub Studio desktop application shell."""
+
+from __future__ import annotations
+
 import sys
-import threading
+from pathlib import Path
+from tkinter import filedialog, messagebox
+
 import customtkinter as ctk
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'core'))
 
-from downloader import download_video, is_bilibili_url
-from bilibili_auth import (
-    show_login_window,
-    has_login_session,
-    prepare_bilibili_session,
-    LOGIN_COOKIE_FILE,
-    GUEST_COOKIE_FILE,
-)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
-ctk.set_appearance_mode('dark')
-ctk.set_default_color_theme('blue')
+from core.backend import VietDubBackend
+from ui.styles import BG, BORDER, MUTED, PANEL, PRIMARY, SUCCESS, WARNING
+from ui.tab_input import InputTab
+from ui.tab_queue import QueueTab
+from ui.tab_review import ReviewTab
+from ui.tab_settings import SettingsTab
 
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'downloads')
+
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
 
 
 class App(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title('VietSub Studio')
-        self.geometry('720x520')
-        self.minsize(600, 420)
-
+    def __init__(self, backend=None):
+        super().__init__(fg_color=BG)
+        self.backend = backend or VietDubBackend()
+        self.backend.initialize()
+        self.title("VietDub Studio")
+        self.geometry("1180x760")
+        self.minsize(980, 650)
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self._shop_map = {}
+        self._project_map = {}
+        self._selected_shop_id = None
+        self._selected_project_id = None
+        self._ensure_onboarding()
         self._build_ui()
-        self._update_bilibili_status()
+        self._refresh_selectors()
+        self._refresh_all(force=True)
+        self.after(1200, self._tick)
+
+    def _ensure_onboarding(self):
+        shops = self.backend.list_shops()
+        if not shops:
+            shop_id = self.backend.create_shop("Shop mặc định")
+            self.backend.create_project("Dự án đầu tiên", shop_id)
+            shops = self.backend.list_shops()
+        self._selected_shop_id = shops[0]["id"]
+        projects = self.backend.list_projects(self._selected_shop_id)
+        if not projects:
+            self._selected_project_id = self.backend.create_project(
+                "Dự án đầu tiên", self._selected_shop_id
+            )
+        else:
+            self._selected_project_id = projects[0]["id"]
 
     def _build_ui(self):
-        pad = {'padx': 16, 'pady': 8}
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
 
+        header = ctk.CTkFrame(
+            self, height=76, fg_color=PANEL, corner_radius=0, border_width=0
+        )
+        header.grid(row=0, column=0, sticky="ew")
+        header.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
-            self, text='VietSub Studio', font=ctk.CTkFont(size=22, weight='bold'),
-        ).pack(anchor='w', **pad)
-
-        ctk.CTkLabel(self, text='URL video (YouTube / TikTok / Douyin / Bilibili):').pack(
-            anchor='w', padx=16,
-        )
-        self.url_entry = ctk.CTkEntry(self, placeholder_text='Dan link hoac text share...')
-        self.url_entry.pack(fill='x', **pad)
-
-        quality_frame = ctk.CTkFrame(self, fg_color='transparent')
-        quality_frame.pack(fill='x', **pad)
-
-        ctk.CTkLabel(quality_frame, text='Bilibili:').pack(side='left')
-        self.bili_quality = ctk.StringVar(value='guest')
-        ctk.CTkRadioButton(
-            quality_frame, text='720p (tu dong)', variable=self.bili_quality, value='guest',
-        ).pack(side='left', padx=(8, 16))
-        ctk.CTkRadioButton(
-            quality_frame, text='1080p (can dang nhap)', variable=self.bili_quality, value='hd',
-        ).pack(side='left')
-
-        bili_frame = ctk.CTkFrame(self, fg_color='transparent')
-        bili_frame.pack(fill='x', **pad)
-
-        self.bili_status = ctk.CTkLabel(bili_frame, text='', text_color='gray')
-        self.bili_status.pack(side='left')
-
+            header,
+            text="VIETDUB",
+            text_color=PRIMARY,
+            font=ctk.CTkFont(size=23, weight="bold"),
+        ).grid(row=0, column=0, padx=(20, 14), pady=18)
+        self.global_status = ctk.CTkLabel(header, text="Sẵn sàng", text_color=MUTED)
+        self.global_status.grid(row=0, column=1, sticky="e", padx=14)
         ctk.CTkButton(
-            bili_frame,
-            text='Ket noi Bilibili',
-            width=140,
-            command=self._on_bilibili_login,
-        ).pack(side='right')
+            header,
+            text="+ Thêm video",
+            width=110,
+            command=lambda: self.tabview.set("1. Thêm video"),
+        ).grid(row=0, column=2, padx=(5, 20))
 
-        self.progress_label = ctk.CTkLabel(self, text='San sang')
-        self.progress_label.pack(anchor='w', **pad)
-
-        self.progress_bar = ctk.CTkProgressBar(self)
-        self.progress_bar.pack(fill='x', padx=16, pady=(0, 8))
-        self.progress_bar.set(0)
-
-        btn_frame = ctk.CTkFrame(self, fg_color='transparent')
-        btn_frame.pack(fill='x', **pad)
-
-        self.download_btn = ctk.CTkButton(
-            btn_frame, text='Tai video', command=self._on_download,
+        self.tabview = ctk.CTkTabview(
+            self,
+            fg_color=BG,
+            segmented_button_fg_color=PANEL,
+            segmented_button_selected_color=PRIMARY,
+            segmented_button_unselected_color=PANEL,
+            segmented_button_unselected_hover_color="#1e293b",
         )
-        self.download_btn.pack(side='left')
+        self.tabview.grid(row=1, column=0, sticky="nsew", padx=8, pady=8)
+        for name in ("1. Thêm video", "2. Hàng đợi", "3. Kiểm tra", "4. Cài đặt"):
+            tab = self.tabview.add(name)
+            tab.grid_columnconfigure(0, weight=1)
+            tab.grid_rowconfigure(0, weight=1)
 
-        self.log_box = ctk.CTkTextbox(self, height=160, state='disabled')
-        self.log_box.pack(fill='both', expand=True, **pad)
+        self.input_tab = InputTab(
+            self.tabview.tab("1. Thêm video"),
+            self.backend,
+            self.get_project_id,
+            lambda: self._refresh_all(force=True),
+            self._start_processing,
+        )
+        self.input_tab.grid(row=0, column=0, sticky="nsew")
+        self.queue_tab = QueueTab(
+            self.tabview.tab("2. Hàng đợi"),
+            self.backend,
+            self.get_project_id,
+            self._start_processing,
+            self._open_review,
+        )
+        self.queue_tab.grid(row=0, column=0, sticky="nsew")
+        self.review_tab = ReviewTab(
+            self.tabview.tab("3. Kiểm tra"),
+            self.backend,
+            self.get_project_id,
+            self._continue_after_review,
+        )
+        self.review_tab.grid(row=0, column=0, sticky="nsew")
+        self.settings_tab = SettingsTab(
+            self.tabview.tab("4. Cài đặt"),
+            self.backend,
+            self.get_shop_id,
+            self._shop_saved,
+        )
+        self.settings_tab.grid(row=0, column=0, sticky="nsew")
 
-    def _log(self, message: str):
-        self.log_box.configure(state='normal')
-        self.log_box.insert('end', message + '\n')
-        self.log_box.see('end')
-        self.log_box.configure(state='disabled')
+    def get_shop_id(self):
+        return self._selected_shop_id
 
-    def _update_bilibili_status(self):
-        if has_login_session():
-            self.bili_status.configure(
-                text='Bilibili: da dang nhap (1080p)', text_color='#4ade80',
-            )
-        elif GUEST_COOKIE_FILE.is_file():
-            self.bili_status.configure(
-                text='Bilibili: session tu dong (720p)', text_color='gray',
-            )
-        else:
-            self.bili_status.configure(
-                text='Bilibili: chua ket noi (tu dong khi tai)', text_color='gray',
-            )
+    def get_project_id(self):
+        return self._selected_project_id
 
-    def _on_bilibili_login(self):
-        self._log('Mo cua so dang nhap Bilibili...')
-        self.bili_status.configure(text='Dang cho dang nhap...', text_color='#fbbf24')
-        path = show_login_window()
-        self._on_login_done(path)
+    def _refresh_selectors(self):
+        shops = self.backend.list_shops()
+        self._shop_map = {f"{item['name']}": item["id"] for item in shops}
+        if self._selected_shop_id not in self._shop_map.values():
+            self._selected_shop_id = next(iter(self._shop_map.values()), None)
 
-    def _on_login_done(self, path):
-        if path and os.path.isfile(path):
-            self._log('Dang nhap Bilibili thanh cong!')
-            self.bili_quality.set('hd')
-        else:
-            self._log('Chua luu duoc session dang nhap.')
-        self._update_bilibili_status()
+        projects = self.backend.list_projects(self._selected_shop_id)
+        self._project_map = {f"#{item['id']} · {item['name']}": item["id"] for item in projects}
+        if self._selected_project_id not in self._project_map.values():
+            self._selected_project_id = next(iter(self._project_map.values()), None)
 
-    def _on_download(self):
-        url = self.url_entry.get().strip()
-        if not url:
-            self._log('Vui long nhap URL.')
+    def _refresh_all(self, force=False):
+        dashboard = None
+        if self._selected_project_id:
+            try:
+                dashboard = self.backend.project_dashboard(self._selected_project_id)
+            except KeyError:
+                self._selected_project_id = None
+        self.input_tab.refresh(dashboard)
+        self.queue_tab.refresh(dashboard)
+        self.review_tab.refresh(dashboard, force=force)
+        if self.tabview.get() == "4. Cài đặt":
+            self.settings_tab.refresh()
+
+    def _tick(self):
+        try:
+            self._refresh_all()
+        finally:
+            if self.winfo_exists():
+                self.after(1200, self._tick)
+
+    def _start_processing(self):
+        project_id = self.get_project_id()
+        if not project_id:
             return
+        if self.backend.is_processing():
+            self.tabview.set("2. Hàng đợi")
+            return
+        try:
+            self.backend.start_project(project_id, event_callback=self._queue_event)
+            self.global_status.configure(text="Đang xử lý...", text_color=PRIMARY)
+            self.tabview.set("2. Hàng đợi")
+            self._refresh_all(force=True)
+        except Exception as error:
+            messagebox.showerror("Không thể chạy", str(error), parent=self)
 
-        quality = self.bili_quality.get() if is_bilibili_url(url) else 'guest'
-        cookies_file = None
+    def _queue_event(self, event):
+        try:
+            self.after(0, lambda value=event: self._handle_queue_event(value))
+        except RuntimeError:
+            pass
 
-        if is_bilibili_url(url):
-            self._log('Chuan bi session Bilibili...')
-            self.progress_label.configure(text='Dang ket noi Bilibili...')
-            self.update_idletasks()
-            cookie_path = prepare_bilibili_session(quality=quality, video_url=url)
-            if not cookie_path:
-                self._log('Khong lay duoc session Bilibili.')
-                if quality == 'hd':
-                    self._log('Nhan "Ket noi Bilibili" de dang nhap 1080p.')
-                return
-            cookies_file = str(cookie_path)
-            self._update_bilibili_status()
+    def _handle_queue_event(self, event):
+        event_name = event["event"]
+        if event_name == "progress":
+            self.global_status.configure(text=str(event["detail"]), text_color=PRIMARY)
+        elif event_name == "failed":
+            self.global_status.configure(text="Có job bị lỗi", text_color="#ef4444")
+        elif event_name == "idle":
+            self.global_status.configure(text="Đã xử lý xong hàng đợi", text_color=SUCCESS)
+        elif event_name == "interrupted":
+            self.global_status.configure(text="Đã tạm dừng", text_color=WARNING)
+        self._refresh_all(force=True)
 
-        self.download_btn.configure(state='disabled')
-        self.progress_bar.set(0.1)
-        self.progress_label.configure(text='Dang tai...')
+    def _open_review(self, job_id):
+        self.review_tab.select_job(job_id)
+        self.tabview.set("3. Kiểm tra")
+        self._refresh_all(force=True)
 
-        def run():
-            def progress(msg):
-                self.after(0, lambda: self.progress_label.configure(text=msg))
+    def _continue_after_review(self, project_id):
+        self._refresh_all(force=True)
+        self._start_processing()
 
-            result = download_video(
-                url=url,
-                output_path=OUTPUT_DIR,
-                progress_callback=progress,
-                bilibili_quality=quality,
-                cookies_file=cookies_file,
+    def _on_shop_selected(self, label):
+        self._selected_shop_id = self._shop_map.get(label)
+        self._selected_project_id = None
+        self._refresh_selectors()
+        self._refresh_all(force=True)
+
+    def _on_project_selected(self, label):
+        self._selected_project_id = self._project_map.get(label)
+        self._refresh_all(force=True)
+
+    def _new_shop(self):
+        dialog = ctk.CTkInputDialog(text="Tên shop hoặc khách hàng:", title="Tạo shop")
+        name = dialog.get_input()
+        if not name or not name.strip():
+            return
+        try:
+            shop_id = self.backend.create_shop(name.strip())
+            project_id = self.backend.create_project("Dự án đầu tiên", shop_id)
+            self._selected_shop_id = shop_id
+            self._selected_project_id = project_id
+            self._refresh_selectors()
+            self._refresh_all(force=True)
+        except Exception as error:
+            messagebox.showerror("Không tạo được shop", str(error), parent=self)
+
+    def _new_project(self):
+        if not self._selected_shop_id:
+            return
+        dialog = ctk.CTkInputDialog(text="Tên dự án:", title="Tạo dự án")
+        name = dialog.get_input()
+        if not name or not name.strip():
+            return
+        output_dir = filedialog.askdirectory(
+            parent=self,
+            title="Chọn thư mục xuất (Cancel để dùng mặc định)",
+        )
+        try:
+            project_id = self.backend.create_project(
+                name.strip(), self._selected_shop_id, output_dir or None
             )
-            self.after(0, lambda: self._on_download_done(result))
+            self._selected_project_id = project_id
+            self._refresh_selectors()
+            self._refresh_all(force=True)
+        except Exception as error:
+            messagebox.showerror("Không tạo được dự án", str(error), parent=self)
 
-        threading.Thread(target=run, daemon=True).start()
+    def _shop_saved(self):
+        self._refresh_selectors()
+        self._refresh_all(force=True)
+        self.global_status.configure(text="Đã lưu cài đặt", text_color=SUCCESS)
 
-    def _on_download_done(self, result):
-        self.download_btn.configure(state='normal')
-        self.progress_bar.set(1.0 if result['success'] else 0)
-
-        if result['success']:
-            self.progress_label.configure(text='Tai xong!')
-            self._log(f"OK: {result['title']}")
-            self._log(f"File: {result['filepath']}")
-        else:
-            self.progress_label.configure(text='Loi')
-            self._log(f"LOI: {result['error']}")
-            if result.get('needs_bilibili_login'):
-                self._log('-> Nhan "Ket noi Bilibili" de tai 1080p.')
-
-        self._update_bilibili_status()
+    def _on_close(self):
+        try:
+            self.backend.stop_project()
+        finally:
+            self.destroy()
 
 
 def main():
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    app = App()
-    app.mainloop()
+    App().mainloop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

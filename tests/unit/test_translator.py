@@ -44,8 +44,8 @@ class TranslatorTests(unittest.TestCase):
         path.write_text(SRT_CONTENT, encoding="utf-8")
         return path
 
-    def test_keeps_block_boundaries_when_markers_survive(self):
-        fake = FakeTranslator(["[[VDS_0000]] Xin chao\n[[VDS_0001]] The gioi"])
+    def test_translates_blocks_individually_to_avoid_context_bleeding(self):
+        fake = FakeTranslator(["Xin chao", "The gioi"])
 
         result = translator_module.translate_srt(
             str(self._write_srt()), translator=fake, context_window=2
@@ -55,10 +55,11 @@ class TranslatorTests(unittest.TestCase):
         output = Path(result["output_path"]).read_text(encoding="utf-8")
         self.assertIn("Xin chao", output)
         self.assertIn("The gioi", output)
-        self.assertEqual(len(fake.calls), 1)
+        self.assertEqual(len(fake.calls), 2)
+        self.assertNotIn("[[VDS_", fake.calls[0])
 
-    def test_falls_back_to_individual_blocks_when_markers_are_lost(self):
-        fake = FakeTranslator(["Xin chao the gioi", "Xin chao", "The gioi"])
+    def test_keeps_individual_results_in_their_original_timing(self):
+        fake = FakeTranslator(["Xin chao", "The gioi"])
 
         result = translator_module.translate_srt(
             str(self._write_srt()), translator=fake, context_window=2
@@ -68,12 +69,13 @@ class TranslatorTests(unittest.TestCase):
         output = Path(result["output_path"]).read_text(encoding="utf-8")
         self.assertIn("1\n00:00:00,000 --> 00:00:01,000\nXin chao", output)
         self.assertIn("2\n00:00:01,000 --> 00:00:02,000\nThe gioi", output)
-        self.assertEqual(len(fake.calls), 3)
+        self.assertEqual(fake.calls, ["\u4f60\u597d", "\u4e16\u754c"])
 
     def test_retries_transient_errors(self):
         fake = FakeTranslator([
             RuntimeError("temporary"),
-            "[[VDS_0000]] Xin chao\n[[VDS_0001]] The gioi",
+            "Xin chao",
+            "The gioi",
         ])
 
         with self.assertLogs(level="WARNING") as logs:
@@ -82,7 +84,7 @@ class TranslatorTests(unittest.TestCase):
             )
 
         self.assertTrue(result["success"])
-        self.assertEqual(len(fake.calls), 2)
+        self.assertEqual(len(fake.calls), 3)
         self.assertIn("temporary", logs.output[0])
 
 

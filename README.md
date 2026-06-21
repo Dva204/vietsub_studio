@@ -54,7 +54,32 @@ Xem chi tiết trong `roadmap.md`.
 3) `pip install -r requirements.txt`
 
 ## Bắt đầu
-Chạy entry point trong dự án (tùy theo cách bạn cấu hình hiện tại).
+
+```powershell
+python main.py
+```
+
+Luồng sử dụng: thêm link/file → chạy hàng đợi → kiểm tra các câu được đánh dấu
+→ package được xuất tự động.
+
+## Backend API
+
+Toàn bộ workflow ngoài UI được truy cập qua một facade:
+
+```python
+from core.backend import VietDubBackend
+
+backend = VietDubBackend()
+backend.initialize()
+```
+
+Xem contract dành cho UI trong `BACKEND.md`.
+
+Chạy toàn bộ unit test backend:
+
+```powershell
+python -m unittest discover -s tests/unit -v
+```
 
 ## License
 Xem phần mô tả trong code `utils/license.py` (HWID binding / activate theo máy).
